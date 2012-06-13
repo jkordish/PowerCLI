@@ -1,0 +1,75 @@
+# Description: Random notes. Not all PowerCLI related. lot of psexec and local windows commands
+Add-PSSnapin VMware.VimAutomation.Core
+Connect-VIServer 10.49.100.179
+
+get-vm POCSATXA1211 | Get-NetworkAdapter | Set-NetworkAdapter -NetworkName "DEV-EUR"
+
+$NICs = Get-WmiObject Win32_NetworkAdapterConfiguration `
+| Where {$_.IPEnabled -eq "TRUE"}
+foreach($NIC in $NICs) {$NIC.EnableDHCP()}
+
+
+devtech  on poc2
+pxe boot on poc1
+
+Add-PSSnapin VMware.VimAutomation.Core
+Connect-VIServer 10.49.100.179
+$VMs = Get-Content "C:\Users\joseph.kordish.da\Desktop\old_poca_virtualmachines.txt"
+{get-vm $vm | Get-NetworkAdapter | Set-NetworkAdapter -Confirm:$false -NetworkName "POC" }
+
+
+net computer \\computername /del
+netsh interface ip set address name="Local Area Connection" dhcp
+net computer \\computername /add
+
+
+
+$netsh_ip ="c:\windows\system32\netsh.exe interface ip set address ""10.49.101.213"" static 10.49.207.3 255.255.255.192 10.49.207.1 1"
+$netsh_dns ="c:\windows\system32\netsh.exe interface ip set dns ""10.49.101.211"" static "
+$unjoin ="c:\windows\system32\net.exe computer \\POCSATXA1211 /del"
+Invoke-VMScript -VM POCSATXB7213 -GuestCredential $cred -ScriptType bat -ScriptText $netsh_ip
+Invoke-VMScript -VM POCSATXA1211 -GuestCredential $cred -ScriptType bat -ScriptText $netsh_dns
+Invoke-VMScript -VM POCSATXA1211 -GuestCredential $cred -ScriptType bat -ScriptText $unjoin
+
+
+
+
+$netsh_ip ="c:\windows\system32\netsh.exe interface ip set address ""10.49.101.213"" static 10.49.207.3 255.255.255.192 10.49.207.1 1"
+Invoke-VMScript -VM POCSATXB7213 -GuestCredential $cred -ScriptType bat -ScriptText $netsh_ip
+
+
+/s /v"/qn REBOOT=ReallySuppress?
+
+psexec.exe -u DTEADMIN -p ABCabc12345%$# @VirtualMachineDNSInNewProdTest.txt echo "%COMPUTERNAME%" > C:\results.txt 2>&1
+psexec.exe @VirtualMachineDNSInNewProdTest.txt NET USER DTEADMIN /DELETE
+psexec.exe @VirtualMachineDNSInNewProdTest.txt NET USER username password /ADD
+psexec.exe @VirtualMachineDNSInNewProdTest.txt NET LOCALGROUP "Administrators" username /ADD
+
+DTEdte5678%^&*
+
+
+$script = 'NET USER username password /ADD && NET LOCALGROUP "Administrators" username /ADD'
+foreach ($vm in $vms | where {$_.PowerState -eq "PoweredOn"}){ Invoke-VMScript $vm -HostCredential $HostCred -GuestCredential $GuestCred -ScriptType bat -ScriptText $script_delete -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Confirm:$false} 
+ 
+
+
+# Working info for the re-iping
+$script_add = 'NET USER username password /ADD'
+$script_grp = 'NET LOCALGROUP "Administrators" username /ADD'
+$script_del = 'NET USER dte.picard /DELETE'
+#as domain user
+$script_drm = 'netdom remove %COMPUTERNAME% & netsh interface ip set address name="Local Area Connection" static $line.NewIP 255.255.252.0 1 & netsh interface ip set dns "Local Area Connection" static 10.49.200.3'
+# as local admin
+$script_ip =  'netsh interface ip set address name="Local Area Connection" static $line.NewIP 255.255.252.0 1 & netsh interface ip set dns "Local Area Connection" static 10.49.200.3'
+$script_dadd = 'netdom join %COMPUTERNAME% /Domain:DEV /UserD:Domain\username /PasswordD:'
+$GuestLocal = $Host.UI.PromptForCredential("Please Enter DA Creds", "Domain Creds","username","password")
+$HostCred  = $Host.UI.PromptForCredential("Please Enter ESXi Creds", "ESXi Creds","root","password")
+
+
+
+$vms = (Get-VM -Location "SATX" |  Where-Object {$_.PowerState -eq "PoweredOn"})
+$results = @()
+foreach ($vm in $vms) { $results += $vm.Guest.IPAddress}
+psexec.exe -n 10 -s -d @machines.txt gpupdate.exe /force
+psexec.exe -n 10 -s -d @machines.txt wuauclt.exe /ResetAuthorization /DetectNow
+psexec.exe -n 10 -d -d @machines.txt wuauclt.exe /ScanNow

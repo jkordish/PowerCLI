@@ -1,0 +1,1 @@
+Get-VMHost | Foreach { Stop-VMHostService -Confirm:$false -HostService ($_ | Get-VMHostService | Where { $_.Key -eq "TSM-SSH"} ) } 
